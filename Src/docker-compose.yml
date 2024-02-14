@@ -1,0 +1,18 @@
+version: '3.4'
+
+services:
+  
+  website:
+    image: ${DOCKER_REGISTRY-}website
+    build:
+      context: .
+      dockerfile: Apps/Website/Dockerfile
+    depends_on:
+        - translationadapterservice
+
+  translationadapterservice:
+    image: ${DOCKER_REGISTRY-}translationadapterservice
+    build:
+      context: .
+      dockerfile: Services/TranslationAdapterService/Dockerfile
+

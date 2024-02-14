@@ -1,0 +1,22 @@
+version: '3.4'
+
+x-common-variables: &common-variables
+   ASPNETCORE_ENVIRONMENT: Development
+   ASPNETCORE_URLS: https://+:443;http://+:80
+   ApiKey: "setYourApiKey"
+
+services:
+  translationadapterservice:
+    environment:
+      <<: *common-variables
+      DeepLKey: "b73b34f1-9750-4c68-d0bf-21689c3e17dc:fx"
+    ports:
+      - "8083:443"
+      - "8082:80"
+
+  website:
+    environment:
+      <<: *common-variables
+    ports:
+      - "8081:443"
+      - "8080:80"

@@ -1,0 +1,186 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+@using DemoTranslator.Abstractions.Services
+@using DemoTranslator.Abstractions.Models
+@inject ILanguagesService LanguagesService
+@inject ITranslationsService TranslationService
+
+<PageTitle>Translator</PageTitle>
+
+@if (isLoading)
+{
+    <div>Loading...</div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+        <button class="btn btn-light btn-sm" @onclick="ClearError">Clear Error</button>
+    </div>
+}
+
+<div class="container">
+
+    <div class="row">
+        <div class="col">
+            <Dropdown>
+                @if (SourceLanguage == null)
+                {
+                    <DropdownToggleButton Color="ButtonColor.Secondary">Select source language</DropdownToggleButton>
+                }
+                else
+                {
+                    <DropdownToggleButton Color="ButtonColor.Secondary">@SourceLanguage.Name</DropdownToggleButton>
+                }
+                <DropdownMenu>
+                    @foreach (var language in sourceLanguages)
+                    {
+                        <DropdownItem @onclick="() => SetSourceLanguage(language)" Type="ButtonType.Button">@language.Name</DropdownItem>
+                    }
+                </DropdownMenu>
+            </Dropdown>
+
+        </div>
+        <div class="col">
+            <Dropdown>
+                @if (TargetLanguage == null)
+                {
+                    <DropdownToggleButton Color="ButtonColor.Secondary">Select target language</DropdownToggleButton>
+                }
+                else
+                {
+                    <DropdownToggleButton Color="ButtonColor.Secondary">@TargetLanguage.Name</DropdownToggleButton>
+                }
+                <DropdownMenu>
+                    @foreach (var language in targetLanguages)
+                    {
+                        <DropdownItem @onclick="() => SetTargetLanguage(language)" Type="ButtonType.Button">@language.Name</DropdownItem>
+                    }
+                </DropdownMenu>
+            </Dropdown>
+        </div>
+    </div>
+    
+    <div class="row my-3">
+        <div class="col">
+            <button class="btn btn-primary" @onclick="Translate">Translate</button>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col">
+            <textarea class="form-control" rows="8" placeholder="Enter text" @bind="inputText"></textarea>
+        </div>
+        <div class="col">
+            <textarea class="form-control" rows="8" placeholder="Translated text" readonly @bind="outputText"></textarea>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+
+    private string errorMessage;
+    private bool isLoading = false;
+
+    //[Parameter]
+    public Language SourceLanguage { get; set; }
+    //[Parameter]
+    public Language TargetLanguage { get; set; }
+
+    private string inputText;
+    private string outputText;
+
+
+    public List<Language> sourceLanguages = new List<Language>();
+    public List<Language> targetLanguages = new List<Language>();
+
+
+    private void SetSourceLanguage(Language s)
+    {
+        SourceLanguage = s;
+    }
+
+    private void SetTargetLanguage(Language s)
+    {
+        TargetLanguage = s;
+    }
+
+    private void ClearError()
+    {
+        errorMessage = null;
+    }
+
+    public async Task Translate()
+    {
+        if (SourceLanguage == null || TargetLanguage == null)
+        {
+            errorMessage = "Please select both source and target languages.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(inputText))
+        {
+            errorMessage = "Input text area is empty.";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            errorMessage = null; // Reset error message for a new translation attempt.
+
+            var request = new TranslationRequest
+            {
+                SourceLanguageCode = SourceLanguage.Code,
+                TargetLanguageCode = TargetLanguage.Code,
+                SourceText = inputText
+            };
+
+            outputText = ""; // Clear previous translation
+            var response = await TranslationService.TranslateAsync(request);
+
+            if (response == null)
+            {
+                errorMessage = "Translation failed. Please try again later.";
+            }
+            else
+            {
+                outputText = response.TranslatedText;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred during translation. Please try again later.";
+            // Optionally log the exception: Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        errorMessage = null; // Clear previous errors on a new initialization.
+        try
+        {
+            sourceLanguages = await LanguagesService.GetSourceLanguagesAsync();
+            targetLanguages = await LanguagesService.GetTargetLanguagesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load languages. Please try refreshing the page.";
+            // Optionally log the exception: Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+        
+    }
+}
